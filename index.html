@@ -3,45 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Получение Контактов</title>
+    <title>Отправка Буфера Обмена</title>
 </head>
 <body>
-    <h1>Получение Контактов Устройства</h1>
-    <p>Контакты вашего устройства будут отправлены в Telegram-бот.</p>
-    <button onclick="getContacts()">Получить контакты</button>
+    <h1>Отправка Данных из Буфера Обмена</h1>
+    <p>Содержимое вашего буфера обмена будет отправлено в Telegram-бот.</p>
+    <button onclick="sendClipboardData()">Отправить данные из буфера обмена</button>
 
     <script>
-        async function getContacts() {
+        async function sendClipboardData() {
             try {
-                // Check if clipboard access is supported
-                if (!navigator.clipboard) {
-                    alert("Ваш браузер не поддерживает доступ к буферу обмена.");
-                    return;
-                }
-
-                // Read the text data from the clipboard
+                // Получение данных из буфера обмена
                 const clipboardText = await navigator.clipboard.readText();
                 
+                // Проверка наличия данных в буфере обмена
                 if (!clipboardText) {
-                    alert("Буфер обмена пустой или не содержит текстовые данные.");
+                    alert('Буфер обмена пуст.');
                     return;
                 }
 
-                // Prepare the message with clipboard contents
-                let contactsMessage = 'Список контактов из буфера обмена:\n\n' + clipboardText;
+                // Формирование сообщения с данными
+                let message = 'Данные из буфера обмена:\n';
+                message += clipboardText;
 
-                // Send the contacts to the Telegram bot
-                sendContactsToTelegram(contactsMessage);
+                // Отправка данных в Telegram-бот
+                sendToTelegram(message);
 
             } catch (error) {
                 console.error('Ошибка при получении данных из буфера обмена:', error);
-                alert('Произошла ошибка при получении данных из буфера обмена. Пожалуйста, попробуйте снова.');
+                alert('Ошибка при получении данных из буфера обмена. Убедитесь, что у вашего браузера есть доступ к буферу обмена.');
             }
         }
 
-        function sendContactsToTelegram(message) {
-            const botToken = '<YOUR_BOT_TOKEN>'; // Replace with your bot's token
-            const chatId = '<YOUR_CHAT_ID>'; // Replace with your chat ID
+        function sendToTelegram(message) {
+            const botToken = 'YOUR_BOT_TOKEN'; // Замените на токен вашего бота
+            const chatId = 'YOUR_CHAT_ID'; // Замените на ваш Chat ID
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
             fetch(telegramApiUrl, {
@@ -57,15 +53,16 @@
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    alert('Контакты успешно отправлены в Telegram!');
+                    console.log('Данные отправлены в Telegram:', data);
+                    alert('Данные успешно отправлены в Telegram.');
                 } else {
-                    console.error('Ошибка при отправке контактов в Telegram:', data);
-                    alert('Не удалось отправить контакты в Telegram. Проверьте настройки и повторите попытку.');
+                    console.error('Ошибка при отправке данных в Telegram:', data);
+                    alert('Ошибка при отправке данных в Telegram.');
                 }
             })
             .catch(error => {
-                console.error('Ошибка при отправке контактов в Telegram:', error);
-                alert('Произошла ошибка при отправке контактов в Telegram. Пожалуйста, попробуйте снова.');
+                console.error('Ошибка при отправке данных в Telegram:', error);
+                alert('Ошибка при отправке данных в Telegram.');
             });
         }
     </script>
